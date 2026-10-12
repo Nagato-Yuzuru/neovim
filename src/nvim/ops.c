@@ -3560,6 +3560,13 @@ void do_pending_operator(cmdarg_T *cap, int old_col, bool gui_yank)
     virtual_op = virtual_active(curwin);
 
     if (Visual.active) {
+      // oap->inclusive defaults to true.
+      // If oap->end is on a NUL (empty line) oap->inclusive becomes
+      // false.  This makes "d}P" and "v}dP" work the same.
+      // Check before get_op_vcol() makes a linewise motion blockwise ("d<C-v>j").
+      if (oap->motion_force == NUL || oap->motion_type == kMTLineWise) {
+        oap->inclusive = true;
+      }
       get_op_vcol(oap, true);
 
       if (!gui_yank) {
@@ -3583,12 +3590,6 @@ void do_pending_operator(cmdarg_T *cap, int old_col, bool gui_yank)
         Visual.resel.line_count = oap->line_count;
       }
 
-      // oap->inclusive defaults to true.
-      // If oap->end is on a NUL (empty line) oap->inclusive becomes
-      // false.  This makes "d}P" and "v}dP" work the same.
-      if (oap->motion_force == NUL || oap->motion_type == kMTLineWise) {
-        oap->inclusive = true;
-      }
       if (Visual.mode == 'V') {
         oap->motion_type = kMTLineWise;
       } else if (Visual.mode == 'v') {

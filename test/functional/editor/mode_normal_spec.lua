@@ -67,4 +67,28 @@ describe('Normal mode', function()
     feed('gk')
     n.assert_alive()
   end)
+
+  it("'] after a forced blockwise linewise motion #42309", function()
+    n.exec([=[
+      function! Opfunc(type)
+        let g:marks = [getpos("'[")[1:3], getpos("']")[1:3]]
+      endfunction
+      set operatorfunc=Opfunc
+    ]=])
+    fn.setline(1, { 'seed', 'ab', 'cd' })
+    feed('2G0g@<C-v>j')
+    eq({ { 2, 1, 0 }, { 3, 1, 0 } }, api.nvim_get_var('marks'))
+    -- With 'virtualedit' the right edge past a short line is kept in coladd.
+    command('set virtualedit=block')
+    fn.setline(1, { 'abcdef', 'abcdef', 'ab' })
+    feed('1G4|g@<C-v>2j')
+    eq({ { 1, 2, 0 }, { 3, 3, 1 } }, api.nvim_get_var('marks'))
+    feed('1G4|y<C-v>2j')
+    eq({ 'bcd', 'bcd', 'b  ' }, fn.getreg('"', 1, 1))
+    command('set virtualedit=')
+    -- Same for a built-in operator.
+    fn.setline(1, { 'abcd', 'abcd', 'cd' })
+    feed('gg0y<C-v>j`]')
+    eq({ 2, 0 }, api.nvim_win_get_cursor(0))
+  end)
 end)
